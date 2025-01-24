@@ -3,9 +3,10 @@
 
 static int PeekIntFallback(BitReaderCxt* br, int bitCount);
 
-void InitBitReaderCxt(BitReaderCxt* br, const void * buffer)
+void InitBitReaderCxt(BitReaderCxt* br, const void * buffer, int bufferSize)
 {
 	br->Buffer = buffer;
+	br->BufferSize = bufferSize;
 	br->Position = 0;
 }
 
@@ -36,10 +37,12 @@ int PeekInt(BitReaderCxt* br, const int bits)
 	const int byteIndex = br->Position / 8;
 	const int bitIndex = br->Position % 8;
 	const unsigned char* buffer = br->Buffer;
+	const int firstByte = byteIndex + 0 < br->BufferSize ? buffer[byteIndex + 0] : 0;
 
 	if (bits <= 9)
 	{
-		int value = buffer[byteIndex] << 8 | buffer[byteIndex + 1];
+		const int secondByte = byteIndex + 1 < br->BufferSize ? buffer[byteIndex + 1] : 0;
+		int value = firstByte << 8 | secondByte;
 		value &= 0xFFFF >> bitIndex;
 		value >>= 16 - bits - bitIndex;
 		return value;
@@ -47,18 +50,23 @@ int PeekInt(BitReaderCxt* br, const int bits)
 
 	if (bits <= 17)
 	{
-		int value = buffer[byteIndex] << 16 | buffer[byteIndex + 1] << 8 | buffer[byteIndex + 2];
-		value &= 0xFFFFFF >> bitIndex;
+		const int secondByte = byteIndex + 1 < br->BufferSize ? buffer[byteIndex + 1] : 0;
+		const int thirdByte = byteIndex + 2 < br->BufferSize ? buffer[byteIndex + 2] : 0;
+		int value = firstByte << 16 | secondByte << 8 | thirdByte;
+		value &= 0xFFFFFF >> bitIndex;	
 		value >>= 24 - bits - bitIndex;
 		return value;
 	}
 
 	if (bits <= 25)
 	{
-		int value = buffer[byteIndex] << 24
-			| buffer[byteIndex + 1] << 16
-			| buffer[byteIndex + 2] << 8
-			| buffer[byteIndex + 3];
+		const int secondByte = byteIndex + 1 < br->BufferSize ? buffer[byteIndex + 1] : 0;
+		const int thirdByte = byteIndex + 2 < br->BufferSize ? buffer[byteIndex + 2] : 0;
+		const int fourthByte = byteIndex + 3 < br->BufferSize ? buffer[byteIndex + 3] : 0;
+		int value = firstByte << 24
+			| secondByte << 16
+			| thirdByte << 8
+			| fourthByte;
 
 		value &= (int)(0xFFFFFFFF >> bitIndex);
 		value >>= 32 - bits - bitIndex;
